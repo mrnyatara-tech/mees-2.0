@@ -17,7 +17,14 @@ import {
   JsonToSseTransformStream,
 } from 'ai';
 import { createMemoryTools } from '@/lib/tools/supermemory';
-import { scira, requiresAuthentication, requiresProSubscription, shouldBypassRateLimits, models, getModelParameters } from '@/ai/providers';
+import {
+  scira,
+  requiresAuthentication,
+  requiresProSubscription,
+  shouldBypassRateLimits,
+  models,
+  getModelParameters,
+} from '@/ai/providers';
 import {
   createStreamId,
   getChatById,
@@ -60,8 +67,8 @@ import {
   redditSearchTool,
   extremeSearchTool,
   createConnectorsSearchTool,
+  codeContextTool,
 } from '@/lib/tools';
-import { XaiProviderOptions } from '@ai-sdk/xai';
 import { GroqProviderOptions } from '@ai-sdk/groq';
 import { markdownJoinerTransform } from '@/lib/parser';
 import { ChatMessage } from '@/lib/types';
@@ -128,17 +135,21 @@ export function getStreamContext() {
   return globalStreamContext;
 }
 
-const getMaxOutputTokens = (model: string) => {
-  const modelConfig = models.find((m) => m.value === model);
-  return modelConfig?.maxOutputTokens ?? 4000;
-};
-
 export async function POST(req: Request) {
   console.log('🔍 Search API endpoint hit');
 
   const requestStartTime = Date.now();
-  const { messages, model, group, timezone, id, selectedVisibilityType, isCustomInstructionsEnabled, searchProvider, selectedConnectors } =
-    await req.json();
+  const {
+    messages,
+    model,
+    group,
+    timezone,
+    id,
+    selectedVisibilityType,
+    isCustomInstructionsEnabled,
+    searchProvider,
+    selectedConnectors,
+  } = await req.json();
   const { latitude, longitude } = geolocation(req);
 
   console.log('--------------------------------');
@@ -292,9 +303,9 @@ export async function POST(req: Request) {
           isProUser: false,
           subscriptionData: user.polarSubscription
             ? {
-              hasSubscription: true,
-              subscription: { ...user.polarSubscription, organizationId: null },
-            }
+                hasSubscription: true,
+                subscription: { ...user.polarSubscription, organizationId: null },
+              }
             : { hasSubscription: false },
           shouldBypassLimits,
           extremeSearchUsage: extremeSearchUsage.count,
@@ -314,9 +325,9 @@ export async function POST(req: Request) {
         isProUser: true,
         subscriptionData: user.polarSubscription
           ? {
-            hasSubscription: true,
-            subscription: { ...user.polarSubscription, organizationId: null },
-          }
+              hasSubscription: true,
+              subscription: { ...user.polarSubscription, organizationId: null },
+            }
           : { hasSubscription: false },
         shouldBypassLimits: true,
         extremeSearchUsage: 0,
@@ -449,7 +460,6 @@ export async function POST(req: Request) {
         stopWhen: stepCountIs(5),
         onAbort: ({ steps }) => {
           console.log('Stream aborted after', steps.length, 'steps');
-
         },
         maxRetries: 10,
         activeTools: [...activeTools],
@@ -463,28 +473,31 @@ export async function POST(req: Request) {
         toolChoice: 'auto',
         providerOptions: {
           openai: {
-            ...model !== "scira-qwen-coder"
+            ...(model !== 'scira-qwen-coder'
               ? {
-                parallelToolCalls: false,
-              }
-              : {}
+                  parallelToolCalls: false,
+                }
+              : {}),
           },
           groq: {
             ...(model === 'scira-gpt-oss-20' || model === 'scira-gpt-oss-120'
               ? {
-                reasoningEffort: 'medium',
-                reasoningFormat: "hidden",
-              }
+                  reasoningEffort: 'medium',
+                  reasoningFormat: 'hidden',
+                }
               : {}),
             ...(model === 'scira-qwen-32b'
               ? {
-                reasoningEffort: 'none',
-              }
+                  reasoningEffort: 'none',
+                }
               : {}),
             parallelToolCalls: false,
             structuredOutputs: true,
             serviceTier: 'auto',
           } satisfies GroqProviderOptions,
+          xai: {
+            parallel_tool_calls: false,
+          },
         },
         tools: (() => {
           const baseTools = {
@@ -515,6 +528,7 @@ export async function POST(req: Request) {
             datetime: datetimeTool,
             extreme_search: extremeSearchTool(dataStream),
             greeting: greetingTool(timezone),
+            code_context: codeContextTool,
           };
 
           if (!user) {
@@ -580,18 +594,6 @@ export async function POST(req: Request) {
           }
         },
         onFinish: async (event) => {
-          console.log('Fin reason: ', event.finishReason);
-          console.log('Reasoning: ', event.reasoningText);
-          console.log('reasoning details: ', event.reasoning);
-          console.log('Steps: ', event.steps);
-          console.log('Messages: ', event.response.messages);
-          console.log('Message content: ', event.response.messages[event.response.messages.length - 1].content);
-          console.log('Response: ', event.response);
-          console.log('Provider metadata: ', event.providerMetadata);
-          console.log('Sources: ', event.sources);
-          console.log('Usage: ', event.usage);
-          console.log('Total Usage: ', event.totalUsage);
-
           if (user?.id && event.finishReason === 'stop') {
             after(async () => {
               try {
@@ -692,13 +694,12 @@ export async function POST(req: Request) {
       }
     },
   });
-  const streamContext = getStreamContext();
+  // const streamContext = getStreamContext();
 
-  if (streamContext) {
-    return new Response(
-      await streamContext.resumableStream(streamId, () => stream.pipeThrough(new JsonToSseTransformStream())),
-    );
-  } else {
-    return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
-  }
+  // if (streamContext) {
+  //   return new Response(
+  //     await streamContext.resumableStream(streamId, () => stream.pipeThrough(new JsonToSseTransformStream())),
+  //   );
+  // }
+  return new Response(stream.pipeThrough(new JsonToSseTransformStream()));
 }

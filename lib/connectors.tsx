@@ -77,21 +77,21 @@ export const CONNECTOR_ICONS: Record<string, (props: SVGProps<SVGSVGElement>) =>
 export const CONNECTOR_CONFIGS: Record<ConnectorProvider, ConnectorConfig> = {
   'google-drive': {
     name: 'Google Drive',
-    description: 'Sync documents, spreadsheets, and presentations from Google Drive',
+    description: 'Search through documents, spreadsheets, and presentations from Google Drive',
     icon: 'google-drive',
     documentLimit: 3000,
     syncTag: 'gdrive-sync',
   },
   notion: {
     name: 'Notion',
-    description: 'Sync pages and databases from your Notion workspace',
+    description: 'Search through pages and databases from your Notion workspace',
     icon: 'notion',
     documentLimit: 2000,
     syncTag: 'notion-workspace',
   },
   onedrive: {
     name: 'OneDrive',
-    description: 'Sync documents and files from Microsoft OneDrive (Coming Soon)',
+    description: 'Search through documents and files from Microsoft OneDrive (Coming Soon)',
     icon: 'onedrive',
     documentLimit: 3000,
     syncTag: 'onedrive-sync',
@@ -100,9 +100,7 @@ export const CONNECTOR_CONFIGS: Record<ConnectorProvider, ConnectorConfig> = {
 
 function getBaseUrl() {
   if (process.env.NODE_ENV === 'development') {
-    return process.env.NGROK_URL || process.env.NEXT_PUBLIC_VERCEL_URL || 'http://localhost:3000';
-  } else if (process.env.NODE_ENV === 'production' || process.env.NEXT_PUBLIC_VERCEL_URL !== 'https://scira.ai') {
-    return process.env.NEXT_PUBLIC_VERCEL_URL;
+    return process.env.NGROK_URL || 'http://localhost:3000';
   }
   return 'https://scira.ai';
 }

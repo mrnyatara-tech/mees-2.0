@@ -93,6 +93,14 @@ export const auth = betterAuth({
       clientId: serverEnv.TWITTER_CLIENT_ID,
       clientSecret: serverEnv.TWITTER_CLIENT_SECRET,
     },
+    microsoft: {
+      clientId: process.env.MICROSOFT_CLIENT_ID as string,
+      clientSecret: process.env.MICROSOFT_CLIENT_SECRET as string,
+      // Optional
+      tenantId: 'common',
+      authority: 'https://login.microsoftonline.com', // Authentication authority URL
+      prompt: 'select_account', // Forces account selection
+    },
   },
   pluginRoutes: {
     autoNamespace: true,
@@ -124,19 +132,20 @@ export const auth = betterAuth({
         dodowebhooks({
           webhookKey: process.env.DODO_PAYMENTS_WEBHOOK_SECRET!,
           onPayload: async (payload) => {
-            console.log('🔔 Received Dodo Payments webhook:', payload.type);
-            console.log('📦 Payload data:', JSON.stringify(payload.data, null, 2));
+            const webhookPayload = payload as any;
+            console.log('🔔 Received Dodo Payments webhook:', webhookPayload.type);
+            console.log('📦 Payload data:', JSON.stringify(webhookPayload.data, null, 2));
 
             if (
-              payload.type === 'payment.succeeded' ||
-              payload.type === 'payment.failed' ||
-              payload.type === 'payment.cancelled' ||
-              payload.type === 'payment.processing'
+              webhookPayload.type === 'payment.succeeded' ||
+              webhookPayload.type === 'payment.failed' ||
+              webhookPayload.type === 'payment.cancelled' ||
+              webhookPayload.type === 'payment.processing'
             ) {
-              console.log('🎯 Processing payment webhook:', payload.type);
+              console.log('🎯 Processing payment webhook:', webhookPayload.type);
 
               try {
-                const data = payload.data;
+                const data = webhookPayload.data;
 
                 // Extract user ID from customer data if available
                 let validUserId = null;
@@ -426,6 +435,6 @@ export const auth = betterAuth({
     }),
     nextCookies(),
   ],
-  trustedOrigins: ['https://localhost:3000', 'https://scira.ai', 'https://www.scira.ai'],
-  allowedOrigins: ['https://localhost:3000', 'https://scira.ai', 'https://www.scira.ai'],
+  trustedOrigins: ['http://localhost:3000', 'https://scira.ai', 'https://www.scira.ai'],
+  allowedOrigins: ['http://localhost:3000', 'https://scira.ai', 'https://www.scira.ai'],
 });
